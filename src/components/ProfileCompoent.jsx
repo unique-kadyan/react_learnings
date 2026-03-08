@@ -61,7 +61,16 @@ function ProfileComponent() {
   };
   return (
     <div>
-      <h2 background="lightgray" font="bold" fontsize="large">
+      <header className="App-header">
+        <div>
+          <h1>
+            This is the practical use of the react js including components and
+            state management with state hooks preserving the older data in
+            memory
+          </h1>
+        </div>
+      </header>
+      <h2 background="lightgray" font="bold" fontSize="large">
         {" "}
         This is Profile Page
       </h2>
