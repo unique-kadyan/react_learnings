@@ -1,42 +1,44 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { PHOTO_BASE_URL } from "../assets/ApiResources";
 
-const LIMIT = 5;
-// const TOTAL_PAGES = 50;
+const BATCH_SIZE = 5;
 
 const PhotoComponent = () => {
   const [imageUrl, setImageUrl] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const pageRef = useRef(1);
   const observer = useRef(null);
 
-  const fetchPhotos = useCallback(async () => {
+  const fetchBatch = useCallback(async () => {
     if (loading || !hasMore) return;
     setLoading(true);
     try {
+      const limit = pageRef.current * BATCH_SIZE;
       const response = await fetch(
-        `${PHOTO_BASE_URL}/products?limit=${LIMIT}`
+        `${PHOTO_BASE_URL}/products?limit=${limit}`,
       );
       const data = await response.json();
-      const newImages = data.map((photo) => photo.image);
-      setImageUrl((prev) => {
-        const existing = new Set(prev);
-        const unique = newImages.filter((img) => !existing.has(img));
-        if (unique.length === 0) return prev;
-        return [...prev, ...unique];
-      });
-      setHasMore(false);
+      const newImages = data.map(({ id, title, image, price, description, rating }) => ({
+        id, title, image, price, description, rating,
+      }));
+      if (newImages.length === imageUrl.length) {
+        setHasMore(false);
+      } else {
+        setImageUrl(newImages);
+        pageRef.current += 1;
+      }
     } catch (error) {
-      console.error("Error fetching image:", error);
-      setError("Failed to fetch image");
+      console.error("Error fetching products:", error);
+      setError("Failed to fetch products");
     } finally {
       setLoading(false);
     }
-  }, [loading, hasMore]);
+  }, [loading, hasMore, imageUrl.length]);
 
   useEffect(() => {
-    fetchPhotos();
+    fetchBatch();
   }, []);
 
   const lastImageRef = useCallback(
@@ -45,12 +47,12 @@ const PhotoComponent = () => {
       if (observer.current) observer.current.disconnect();
       observer.current = new IntersectionObserver((entries) => {
         if (entries[0].isIntersecting && hasMore) {
-          fetchPhotos();
+          fetchBatch();
         }
       });
       if (node) observer.current.observe(node);
     },
-    [loading, hasMore, fetchPhotos]
+    [loading, hasMore, fetchBatch],
   );
 
   return (
@@ -66,30 +68,45 @@ const PhotoComponent = () => {
           gap: "20px",
         }}
       >
-        {imageUrl.length > 0 ? (
-          imageUrl.map((image, id) => (
-            <li
-              key={id}
-              ref={id === imageUrl.length - 1 ? lastImageRef : null}
-              style={{
-                backgroundColor: "#fff",
-                borderRadius: "8px",
-                padding: "10px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <img
-                src={image}
-                alt={`Image ${id + 1}`}
-                style={{ width: "100%", height: "150px", objectFit: "contain" }}
-              />
-            </li>
-          ))
-        ) : (
-          !loading && <p>No images found.</p>
-        )}
+        {imageUrl.length > 0
+          ? imageUrl.map((itr, index) => (
+              <li
+                key={itr.id}
+                ref={index === imageUrl.length - 1 ? lastImageRef : null}
+                style={{
+                  backgroundColor: "#fff",
+                  borderRadius: "8px",
+                  padding: "15px",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "10px",
+                }}
+              >
+                <img
+                  src={itr.image}
+                  alt={itr.title}
+                  style={{
+                    width: "100%",
+                    height: "150px",
+                    objectFit: "contain",
+                  }}
+                />
+                <h3 style={{ color: "#333", fontSize: "14px", margin: 0, textAlign: "center" }}>
+                  {itr.title}
+                </h3>
+                <p style={{ color: "green", fontSize: "16px", fontWeight: "bold", margin: 0 }}>
+                  ${itr.price}
+                </p>
+                <p style={{ color: "#666", fontSize: "12px", margin: 0, textAlign: "center", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>
+                  {itr.description}
+                </p>
+                <p style={{ color: "orange", fontSize: "12px", margin: 0 }}>
+                  ⭐ {itr.rating.rate} ({itr.rating.count} reviews)
+                </p>
+              </li>
+            ))
+          : !loading && <p>No images found.</p>}
       </ul>
       {loading && <p>Loading more photos...</p>}
       {!hasMore && <p>All photos loaded.</p>}

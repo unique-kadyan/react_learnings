@@ -7,7 +7,9 @@ const NavBar = () => {
             top: 0,
             backgroundColor: "#333",
             padding: "10px 20px",
-            zIndex: 1000,
+            width: "fit-content",
+            margin: "0 auto",
+            zIndex: 500,
         }}>
             <ul style={{
                 display: "flex",
